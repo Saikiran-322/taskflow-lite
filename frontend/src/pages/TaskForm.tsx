@@ -1,55 +1,46 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Box, TextField, Button } from "@mui/material";
 
 type Props = {
-  onSubmit: (title: string, description?: string) => Promise<any>;
-  initial?: { title?: string; description?: string };
-  submitLabel?: string;
+  onCreate: (title: string, description?: string) => void;
 };
 
-export default function TaskForm({
-  onSubmit,
-  initial,
-  submitLabel = "Save",
-}: Props) {
-  const [title, setTitle] = useState(initial?.title ?? "");
-  const [description, setDescription] = useState(initial?.description ?? "");
-  const [loading, setLoading] = useState(false);
+export default function TaskForm({ onCreate }: Props) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
 
-  const handle = async (e: React.FormEvent) => {
+  const handleSubmit = (e: any) => {
     e.preventDefault();
     if (!title.trim()) return;
-    setLoading(true);
-    try {
-      await onSubmit(title.trim(), description.trim() || undefined);
-      setTitle("");
-      setDescription("");
-    } finally {
-      setLoading(false);
-    }
+
+    onCreate(title, description);
+    setTitle("");
+    setDescription("");
   };
 
   return (
-    <Box component="form" onSubmit={handle} sx={{ mb: 3 }}>
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 3 }}
+    >
       <TextField
+        label="Title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        label="Title"
-        fullWidth
         required
-        sx={{ mb: 2 }}
       />
+
       <TextField
+        label="Description"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        label="Description"
-        fullWidth
         multiline
-        rows={2}
-        sx={{ mb: 2 }}
+        rows={3}
       />
-      <Button type="submit" variant="contained" disabled={loading}>
-        {submitLabel}
+
+      <Button variant="contained" type="submit">
+        Add Task
       </Button>
     </Box>
   );

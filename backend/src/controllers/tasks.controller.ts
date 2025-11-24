@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import { TaskService } from "../services/tasks.service";
 
 export const TaskController = {
+  // -----------------------
+  // ORIGINAL CRUD CONTROLLERS
+  // -----------------------
   async getAll(req: Request, res: Response) {
     const tasks = await TaskService.getAll();
     res.json(tasks);
@@ -37,5 +40,57 @@ export const TaskController = {
     const { id } = req.params;
     await TaskService.remove(id);
     res.status(204).send();
+  },
+
+  // ------------------------------
+  // NEW: FILTER / PAGINATION API
+  // ------------------------------
+  async getFiltered(req: Request, res: Response) {
+    try {
+      const { status, from, to, page = 1, limit = 10 } = req.query;
+
+      const tasks = await TaskService.getFiltered(
+        status as string,
+        from as string,
+        to as string,
+        Number(page),
+        Number(limit)
+      );
+
+      const total = await TaskService.countFiltered(
+        status as string,
+        from as string,
+        to as string
+      );
+
+      res.json({
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        tasks,
+      });
+    } catch (err) {
+      console.error("FILTER ERROR:", err);
+      res.status(500).json({ error: "Failed to filter tasks" });
+    }
+  },
+
+  // ------------------------------
+  // NEW: SEARCH API
+  // ------------------------------
+  async search(req: Request, res: Response) {
+    try {
+      const { query } = req.query;
+
+      if (!query) {
+        return res.status(400).json({ error: "Query parameter is required" });
+      }
+
+      const tasks = await TaskService.search(query as string);
+      res.json(tasks);
+    } catch (err) {
+      console.error("SEARCH ERROR:", err);
+      res.status(500).json({ error: "Search failed" });
+    }
   },
 };

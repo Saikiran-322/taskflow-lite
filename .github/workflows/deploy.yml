@@ -1,0 +1,60 @@
+name: CD - Deploy to Render & Vercel
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  render-deploy:
+    name: Trigger Render Deploy
+    runs-on: ubuntu-latest
+    if: ${{ secrets.RENDER_API_KEY && secrets.RENDER_SERVICE_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trigger Render deploy (API)
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          echo "Triggering Render deploy for service ${RENDER_SERVICE_ID}..."
+          curl -s -X POST \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            "https://api.render.com/deploy/srv-${RENDER_SERVICE_ID}/deploys" \
+            -d '{"clearCache":true}' \
+            | jq .
+
+  vercel-deploy:
+    name: Deploy Frontend to Vercel
+    runs-on: ubuntu-latest
+    if: ${{ secrets.VERCEL_TOKEN && secrets.VERCEL_ORG_ID && secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy via Vercel CLI
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          # deploy the built 'dist' folder (Vite output)
+          vercel --token $VERCEL_TOKEN --yes --prod --confirm frontend/dist

@@ -1,81 +1,130 @@
-import { useState } from "react";
-import { Container, Typography, CircularProgress, Box } from "@mui/material";
+import {
+  Container,
+  Typography,
+  CircularProgress,
+  Box,
+  TextField,
+  MenuItem,
+  Button,
+} from "@mui/material";
 import TaskCard from "../components/TaskCard";
 import TaskForm from "./TaskForm";
-import type { Task } from "../hooks/useTasks";
 import { useTasks } from "../hooks/useTasks";
 
 export default function TaskList() {
-  const { tasks, loading, error, createTask, updateTask, deleteTask } =
-    useTasks();
-  const [editing, setEditing] = useState<Task | null>(null);
+  const {
+    tasks,
+    loading,
+    error,
+    total, // ✅ keep this (used later)
 
-  const handleCreate = async (title: string, description?: string) => {
-    await createTask(title, description);
-  };
+    status,
+    query,
+    from,
+    to,
+    page,
 
-  const handleToggle = async (task: Task) => {
-    await updateTask(task.id, {
-      status: task.status === "pending" ? "completed" : "pending",
-    });
-  };
+    setStatus,
+    setQuery,
+    setFrom,
+    setTo,
+    setPage,
 
-  const handleDelete = async (id: string) => {
-    await deleteTask(id);
-  };
-
-  const handleEdit = (task: Task) => {
-    setEditing(task);
-  };
-
-  const handleEditSubmit = async (title: string, description?: string) => {
-    if (!editing) return;
-    await updateTask(editing.id, { title, description });
-    setEditing(null);
-  };
+    searchTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+  } = useTasks();
 
   return (
-    <Container maxWidth="sm" sx={{ py: 4 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Typography variant="h4" mb={4}>
         TaskFlow Lite
       </Typography>
+      {/* SEARCH BAR */}
+      <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+        <TextField
+          fullWidth
+          label="Search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <Button variant="contained" onClick={searchTasks}>
+          Search
+        </Button>
+      </Box>
+      {/* FILTERS */}
+      <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+        <TextField
+          select
+          label="Status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          sx={{ width: 150 }}
+        >
+          <MenuItem value="">All</MenuItem>
+          <MenuItem value="pending">Pending</MenuItem>
+          <MenuItem value="completed">Completed</MenuItem>
+        </TextField>
 
-      {editing ? (
-        <>
-          <Typography variant="h6">Edit Task</Typography>
-          <TaskForm
-            onSubmit={handleEditSubmit}
-            initial={{
-              title: editing.title,
-              description: editing.description ?? "",
-            }}
-            submitLabel="Update"
-          />
-        </>
+        <TextField
+          type="date"
+          label="From"
+          InputLabelProps={{ shrink: true }}
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+        />
+
+        <TextField
+          type="date"
+          label="To"
+          InputLabelProps={{ shrink: true }}
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+        />
+
+        <Button variant="outlined" onClick={() => setPage(1)}>
+          Apply
+        </Button>
+      </Box>
+      {/* CREATE FORM */}
+      <TaskForm onCreate={createTask} /> {/* ❤️ Fixed */}
+      {/* TASK LIST */}
+      {loading ? (
+        <CircularProgress />
+      ) : error ? (
+        <Typography color="error">{error}</Typography>
+      ) : tasks.length === 0 ? (
+        <Typography>No tasks found.</Typography>
       ) : (
-        <>
-          <Typography variant="h6">Create Task</Typography>
-          <TaskForm onSubmit={handleCreate} />
-        </>
-      )}
-
-      {loading && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-          <CircularProgress />
-        </Box>
-      )}
-      {error && <Typography color="error">{error}</Typography>}
-
-      {!loading &&
-        tasks.map((t) => (
+        tasks.map((task) => (
           <TaskCard
-            key={t.id}
-            task={t}
-            onDelete={handleDelete}
-            onEdit={handleEdit}
-            onToggle={handleToggle}
+            key={task.id}
+            task={task}
+            onToggle={(t) =>
+              updateTask(t.id, {
+                status: t.status === "pending" ? "completed" : "pending",
+              })
+            }
+            onEdit={(t) => updateTask(t.id, t)}
+            onDelete={(id) => deleteTask(id)}
           />
-        ))}
+        ))
+      )}
+      {/* PAGINATION */}
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 3, gap: 2 }}>
+        <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
+          Previous
+        </Button>
+
+        <Typography sx={{ pt: 1 }}>
+          Page {page} of {Math.ceil(total / 5)}
+        </Typography>
+
+        <Button disabled={tasks.length < 5} onClick={() => setPage(page + 1)}>
+          Next
+        </Button>
+      </Box>
     </Container>
   );
 }
