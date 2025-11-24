@@ -1,0 +1,33 @@
+services:
+  taskflow-postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: taskflow
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  taskflow-backend:
+    build: ./backend
+    container_name: taskflow-backend
+    ports:
+      - "4001:4000"
+    depends_on:
+      - taskflow-postgres
+    env_file:
+      - ./backend/.env
+
+  taskflow-frontend:
+    build: ./frontend
+    container_name: taskflow-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - taskflow-backend
+
+volumes:
+  postgres_data:
